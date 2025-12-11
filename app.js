@@ -340,3 +340,4 @@ if (!CONFIG.GAS_API_URL) {
     // Optional: Visual indicator for missing config could be added here
 }
 
+
