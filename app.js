@@ -5,7 +5,7 @@
 
 // --- Configuration ---
 const CONFIG = {
-    GAS_API_URL: "", // User must replace this
+    GAS_API_URL: "https://script.google.com/macros/s/AKfycbwbARToM_84SFnh63SwM-OO7s3ebSAGU9DS4d_iKDsgCxDbnOywW8BWZaHb0uBdnP8/exec", // User must replace this
     PASSCODE: "1234",
     SYNC_INTERVAL_MS: 5000
 };
@@ -323,3 +323,4 @@ if (!CONFIG.GAS_API_URL) {
     console.warn("GAS_API_URL is not set.");
     // Optional: Visual indicator for missing config could be added here
 }
+
