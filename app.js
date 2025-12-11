@@ -216,7 +216,10 @@ El.qtyCancelBtn.addEventListener('click', () => {
 });
 
 El.qtyConfirm.addEventListener('click', () => {
-    if (!El.qtyInput.value) return;
+    if (!El.qtyInput.value) {
+        alert("数量を入力してください (Enter Quantity)");
+        return;
+    }
 
     const cat = CATEGORIES[State.catIndex];
     const item = ITEMS_BY_CAT[cat][State.itemIndex];
@@ -229,12 +232,14 @@ El.qtyConfirm.addEventListener('click', () => {
         timestamp: new Date().toISOString()
     };
 
-    State.queue.push(record);
-    saveQueue();
-    alert(`Saved: ${item.name} x${record.qty}`);
-    switchView('item-view');
-    // Maybe auto-advance item?
-    // State.itemIndex++; renderCard();
+    try {
+        State.queue.push(record);
+        saveQueue(); // Triggers processQueue() which will alert on success/fail
+        // alert(`Saved locally: ${item.name} x${record.qty}`); // Removed to avoid double alerts if sync is fast
+        switchView('item-view');
+    } catch (e) {
+        alert("Error saving: " + e.message);
+    }
 });
 
 // --- Sync & Persistence ---
@@ -279,10 +284,7 @@ async function processQueue() {
     try {
         const response = await fetch(CONFIG.GAS_API_URL, {
             method: 'POST',
-            mode: 'no-cors', // GAS web apps often need no-cors or JSONP if simple
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            mode: 'no-cors',
             body: JSON.stringify(chunk)
         });
 
@@ -339,6 +341,3 @@ if (!CONFIG.GAS_API_URL) {
     console.warn("GAS_API_URL is not set.");
     // Optional: Visual indicator for missing config could be added here
 }
-
-
-
