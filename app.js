@@ -265,7 +265,13 @@ async function processQueue() {
         return;
     }
 
-    if (!State.isOnline || State.queue.length === 0) return;
+    // Force sync attempt even if browser thinks we are offline
+    // because navigator.onLine is not always reliable on specific webviews/Android.
+    // if (!State.isOnline || State.queue.length === 0) return;
+    if (State.queue.length === 0) return;
+
+    El.statusText.textContent = 'Syncing...';
+    El.statusDot.classList.add('syncing');
 
     const chunk = State.queue; // Take all
     // In real app, maybe chunk it.
@@ -287,9 +293,13 @@ async function processQueue() {
         console.log("Sent chunk", chunk);
         State.queue = [];
         saveQueue();
+        alert("Synced successfully!"); // Feedback for user
 
     } catch (e) {
         console.error("Sync failed", e);
+        alert("Sync Error: " + e.message);
+        // Do not clear queue
+        updateStatus(); // Revert status text
     }
 }
 
@@ -300,21 +310,27 @@ window.addEventListener('online', () => {
     processQueue();
 });
 window.addEventListener('offline', () => {
+    // navigator.onLine might be false but let's blindly trust it for 'offline' event
+    // or maybe ignore it if we want to force try?
+    // Let's keep it but logging state
+    console.log("Offline event detected");
     State.isOnline = false;
     updateStatus();
 });
 
 // Polling fallback configuration
+// Polling fallback - Disabled to prevent aggressive offline status on buggy WebViews
 setInterval(() => {
-    if (State.isOnline !== navigator.onLine) {
-        State.isOnline = navigator.onLine;
-        updateStatus();
-    }
+    // if (State.isOnline !== navigator.onLine) {
+    //     State.isOnline = navigator.onLine;
+    //     updateStatus();
+    // }
 }, 5000); // Check every 5 seconds
 
 // Init
 // Force check on load
-State.isOnline = navigator.onLine;
+// State.isOnline = navigator.onLine;
+State.isOnline = true; // Optimistic initialization for Android WebView
 renderCard();
 updateStatus();
 
@@ -323,4 +339,3 @@ if (!CONFIG.GAS_API_URL) {
     console.warn("GAS_API_URL is not set.");
     // Optional: Visual indicator for missing config could be added here
 }
-
