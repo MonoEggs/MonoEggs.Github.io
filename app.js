@@ -5,7 +5,7 @@
 
 // --- Configuration ---
 const CONFIG = {
-    GAS_API_URL: "https://script.google.com/macros/s/AKfycbwbARToM_84SFnh63SwM-OO7s3ebSAGU9DS4d_iKDsgCxDbnOywW8BWZaHb0uBdnP8/exec", // User must replace this
+    GAS_API_URL: "", // User must replace this
     PASSCODE: "1234",
     SYNC_INTERVAL_MS: 5000
 };
@@ -104,7 +104,7 @@ function renderCard() {
     // Ensure indices are valid
     if (State.catIndex < 0) State.catIndex = CATEGORIES.length - 1;
     if (State.catIndex >= CATEGORIES.length) State.catIndex = 0;
-    
+
     const cat = CATEGORIES[State.catIndex];
     const items = ITEMS_BY_CAT[cat];
 
@@ -120,7 +120,7 @@ function renderCard() {
     // We only keep one card in DOM for simplicity, or 2 for animations?
     // Let's do a simple replace with animation class
     El.cardStack.innerHTML = '';
-    
+
     const card = document.createElement('div');
     card.className = 'item-card glass-panel';
     card.innerHTML = `
@@ -146,7 +146,7 @@ if (El.cardStack) {
     El.cardStack.addEventListener('touchmove', e => {
         const dx = e.touches[0].clientX - startX;
         const dy = e.touches[0].clientY - startY;
-        
+
         // Simple drag effect
         currentCard.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px) rotate(${dx * 0.05}deg)`;
         e.preventDefault(); // Prevent scroll
@@ -155,7 +155,7 @@ if (El.cardStack) {
     El.cardStack.addEventListener('touchend', e => {
         const dx = e.changedTouches[0].clientX - startX;
         const dy = e.changedTouches[0].clientY - startY;
-        
+
         currentCard.style.transition = 'transform 0.3s ease';
 
         if (Math.abs(dx) > Math.abs(dy)) {
@@ -220,7 +220,7 @@ El.qtyConfirm.addEventListener('click', () => {
 
     const cat = CATEGORIES[State.catIndex];
     const item = ITEMS_BY_CAT[cat][State.itemIndex];
-    
+
     const record = {
         id: item.id,
         name: item.name,
@@ -257,11 +257,19 @@ function updateStatus() {
 }
 
 async function processQueue() {
-    if (!State.isOnline || State.queue.length === 0 || !CONFIG.GAS_API_URL) return;
+    if (!CONFIG.GAS_API_URL) {
+        if (State.queue.length > 0) {
+            El.statusText.textContent = "Setup Required";
+            alert("Error: GAS_API_URL is not configured in app.js. Data is saved locally but cannot be synced.");
+        }
+        return;
+    }
+
+    if (!State.isOnline || State.queue.length === 0) return;
 
     const chunk = State.queue; // Take all
     // In real app, maybe chunk it.
-    
+
     try {
         const response = await fetch(CONFIG.GAS_API_URL, {
             method: 'POST',
@@ -275,21 +283,43 @@ async function processQueue() {
         // With no-cors we can't check status, assume success if no reach error
         // But better is to use redirect or standard CORS if setup right.
         // For this demo, we assume success.
-        
+
         console.log("Sent chunk", chunk);
         State.queue = [];
         saveQueue();
-        
+
     } catch (e) {
         console.error("Sync failed", e);
     }
 }
 
 // Network Listeners
-window.addEventListener('online', () => { State.isOnline = true; updateStatus(); processQueue(); });
-window.addEventListener('offline', () => { State.isOnline = false; updateStatus(); });
+window.addEventListener('online', () => {
+    State.isOnline = true;
+    updateStatus();
+    processQueue();
+});
+window.addEventListener('offline', () => {
+    State.isOnline = false;
+    updateStatus();
+});
+
+// Polling fallback configuration
+setInterval(() => {
+    if (State.isOnline !== navigator.onLine) {
+        State.isOnline = navigator.onLine;
+        updateStatus();
+    }
+}, 5000); // Check every 5 seconds
 
 // Init
+// Force check on load
+State.isOnline = navigator.onLine;
 renderCard();
 updateStatus();
 
+// Check Configuration
+if (!CONFIG.GAS_API_URL) {
+    console.warn("GAS_API_URL is not set.");
+    // Optional: Visual indicator for missing config could be added here
+}
